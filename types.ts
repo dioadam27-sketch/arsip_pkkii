@@ -11,6 +11,7 @@ export interface Folder {
   id: string;
   label: string;
   parentId?: string | null;
+  visibility?: 'public' | 'private'; // New property
 }
 
 export interface ArchiveDocument {
@@ -18,12 +19,14 @@ export interface ArchiveDocument {
   nomorDokumen: string;
   judul: string;
   deskripsi: string;
-  kategori: string; // Changed from ArchiveCategory to string to support dynamic folders
+  kategori: string; 
   tahun: string;
   tanggalUpload: string;
   tags: string[];
   fileSize?: string;
-  fileUrl?: string; // URL publik untuk akses/download file
+  fileUrl?: string; 
+  folderId?: string;
+  visibility?: 'public' | 'private'; // New property
 }
 
 export interface AIParsedData {

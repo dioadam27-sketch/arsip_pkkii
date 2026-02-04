@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Library, FileText, Bookmark, Clock, FolderOpen, LogOut, X, Plus, Check, ChevronRight, ChevronDown, Sun, Moon, Trash2 } from 'lucide-react';
+import { Library, FileText, Bookmark, Clock, FolderOpen, LogOut, X, Plus, Check, ChevronRight, ChevronDown, Sun, Moon, Trash2, Settings, Pencil, Lock, Eye, EyeOff } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
 
 interface SidebarProps {
@@ -8,17 +8,29 @@ interface SidebarProps {
   onLogout?: () => void;
   isOpen: boolean;
   onClose: () => void;
-  folders: { id: string, label: string, parentId?: string | null }[];
-  onAddFolder: (name: string, parentId?: string | null) => void;
+  folders: { id: string, label: string, parentId?: string | null, visibility?: 'public' | 'private' }[];
+  onAddFolder: (name: string, parentId?: string | null, visibility?: 'public' | 'private') => void;
   onDeleteFolder: (id: string) => void;
+  onRenameFolder: (id: string, newName: string) => void;
+  onToggleVisibility?: (id: string, type: 'folder', current: 'public' | 'private') => void;
   userRole: 'admin' | 'guest';
   theme: 'dark' | 'light';
   toggleTheme: () => void;
+  onOpenConfig: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentFilter, setFilter, onLogout, isOpen, onClose, folders, onAddFolder, onDeleteFolder, userRole, theme, toggleTheme }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+    currentFilter, setFilter, onLogout, isOpen, onClose, folders, 
+    onAddFolder, onDeleteFolder, onRenameFolder, onToggleVisibility,
+    userRole, theme, toggleTheme, onOpenConfig 
+}) => {
   const [addingToParentId, setAddingToParentId] = useState<string | null | undefined>(undefined); 
   const [newFolderName, setNewFolderName] = useState('');
+  
+  // State for Renaming
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editFolderName, setEditFolderName] = useState('');
+
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   
   // State for delete confirmation
@@ -48,6 +60,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentFilter, setFilter, onLo
     setFolderToDelete({ id, label });
   };
 
+  const startRenaming = (e: React.MouseEvent, id: string, currentLabel: string) => {
+    e.stopPropagation();
+    setEditingFolderId(id);
+    setEditFolderName(currentLabel);
+  };
+
+  const submitRename = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (editingFolderId && editFolderName.trim()) {
+        onRenameFolder(editingFolderId, editFolderName.trim());
+        setEditingFolderId(null);
+        setEditFolderName('');
+    } else {
+        setEditingFolderId(null);
+    }
+  };
+
   const confirmDeleteFolder = () => {
     if (folderToDelete) {
         onDeleteFolder(folderToDelete.id);
@@ -58,11 +87,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentFilter, setFilter, onLo
   const submitNewFolder = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (newFolderName.trim()) {
-        onAddFolder(newFolderName.trim(), addingToParentId === undefined ? null : addingToParentId);
+        // Default new folders to public unless configured otherwise
+        onAddFolder(newFolderName.trim(), addingToParentId === undefined ? null : addingToParentId, 'public');
         setNewFolderName('');
         setAddingToParentId(undefined);
     } else {
-        setAddingToParentId(undefined); // Cancel if empty
+        setAddingToParentId(undefined); 
     }
   };
 
@@ -78,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentFilter, setFilter, onLo
     });
   };
 
-  // Recursive folder renderer with improved visuals
+  // Recursive folder renderer
   const renderFolders = (parentId: string | null, depth = 0) => {
     const currentLevelFolders = folders.filter(f => f.parentId === parentId);
     
@@ -89,56 +119,107 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentFilter, setFilter, onLo
     return (
         <div className={`space-y-1 ${
             depth > 0 
-            ? 'ml-3 pl-3 border-l-2 border-gray-100 dark:border-zinc-800' // Improved hierarchy line
+            ? 'ml-2 pl-2 border-l border-gray-100 dark:border-zinc-800' 
             : ''
         }`}>
             {currentLevelFolders.map(folder => {
                 const hasChildren = folders.some(f => f.parentId === folder.id);
                 const isExpanded = expandedFolders.has(folder.id);
                 const isActive = currentFilter === folder.id;
+                const isEditing = editingFolderId === folder.id;
+                const isPrivate = folder.visibility === 'private';
 
                 return (
-                    <div key={folder.id}>
-                        <div className={`flex items-center justify-between group rounded-lg transition-all duration-200 ${isActive ? 'bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-gray-50 dark:hover:bg-zinc-900'}`}>
-                            <button
-                                onClick={() => handleLinkClick(folder.id)}
-                                className={`flex-1 flex items-center space-x-2 px-3 py-2 text-sm ${
-                                    isActive 
-                                    ? 'text-blue-700 dark:text-amber-400 font-bold' 
-                                    : depth === 0 ? 'text-gray-700 dark:text-zinc-300 font-semibold' : 'text-gray-600 dark:text-zinc-400 font-medium'
-                                }`}
-                            >
-                                <FolderOpen 
-                                    size={depth === 0 ? 18 : 16} 
-                                    className={`transition-colors ${isActive ? 'text-blue-700 dark:text-amber-400' : 'text-gray-400 dark:text-zinc-600 group-hover:text-amber-500'}`} 
-                                    fill={isActive ? "currentColor" : "none"}
-                                />
-                                <span className="truncate">{folder.label}</span>
-                            </button>
+                    <div key={folder.id} className="min-w-0">
+                        <div className={`flex items-center justify-between group rounded-lg transition-all duration-200 pr-1 ${isActive ? 'bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-gray-50 dark:hover:bg-zinc-900'}`}>
                             
-                            <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity space-x-1">
-                                {userRole === 'admin' && (
-                                    <>
+                            {isEditing ? (
+                                <form onSubmit={submitRename} className="flex-1 flex items-center space-x-1 p-1 min-w-0">
+                                    <input 
+                                        autoFocus
+                                        type="text"
+                                        className="w-full bg-white dark:bg-zinc-900 border border-amber-500 rounded px-2 py-1 text-xs text-gray-900 dark:text-white focus:outline-none"
+                                        value={editFolderName}
+                                        onChange={(e) => setEditFolderName(e.target.value)}
+                                        onBlur={() => submitRename()}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') setEditingFolderId(null);
+                                        }}
+                                    />
+                                </form>
+                            ) : (
+                                /* Main Button (Filter) */
+                                <button
+                                    onClick={() => handleLinkClick(folder.id)}
+                                    className={`flex-1 flex items-center space-x-2 px-2 py-2 text-sm text-left min-w-0 ${
+                                        isActive 
+                                        ? 'text-blue-700 dark:text-amber-400 font-bold' 
+                                        : depth === 0 ? 'text-gray-700 dark:text-zinc-300 font-semibold' : 'text-gray-600 dark:text-zinc-400 font-medium'
+                                    }`}
+                                >
+                                    <div className="shrink-0">
+                                        {isPrivate ? (
+                                            <Lock size={14} className="text-red-400" />
+                                        ) : (
+                                            <FolderOpen 
+                                                size={depth === 0 ? 18 : 16} 
+                                                className={`transition-colors ${isActive ? 'text-blue-700 dark:text-amber-400' : 'text-gray-400 dark:text-zinc-600 group-hover:text-amber-500'}`} 
+                                                fill={isActive ? "currentColor" : "none"}
+                                            />
+                                        )}
+                                    </div>
+                                    <span className="truncate flex-1">{folder.label}</span>
+                                </button>
+                            )}
+                            
+                            <div className="flex items-center space-x-0.5 shrink-0">
+                                {/* Admin Actions (Always Visible now, no opacity-0) */}
+                                {userRole === 'admin' && !isEditing && (
+                                    <div className="flex items-center space-x-0.5 mr-1">
+                                         {/* Toggle Visibility */}
+                                        {onToggleVisibility && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onToggleVisibility(folder.id, 'folder', folder.visibility || 'public'); }}
+                                                className={`p-1 rounded-md transition-colors ${isPrivate ? 'text-red-400 hover:bg-red-50' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800'}`}
+                                                title={isPrivate ? "Ubah ke Publik" : "Ubah ke Privat"}
+                                            >
+                                                {isPrivate ? <EyeOff size={12} /> : <Eye size={12} />}
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={(e) => startRenaming(e, folder.id, folder.label)}
+                                            className="p-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-md text-gray-400 hover:text-yellow-600 transition-colors"
+                                            title="Ubah Nama Folder"
+                                        >
+                                            <Pencil size={12} />
+                                        </button>
                                         <button
                                             onClick={(e) => requestDeleteFolder(e, folder.id, folder.label)}
-                                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-gray-400 hover:text-red-500 transition-colors"
+                                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md text-gray-400 hover:text-red-500 transition-colors"
                                             title="Hapus Folder"
                                         >
-                                            <Trash2 size={13} />
+                                            <Trash2 size={12} />
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); startAddingFolder(folder.id); }}
-                                            className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 transition-colors"
+                                            className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-md text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 transition-colors"
                                             title="Buat Sub-folder"
                                         >
-                                            <Plus size={13} />
+                                            <Plus size={12} />
                                         </button>
-                                    </>
+                                    </div>
                                 )}
+
+                                {/* Expand Button (Always Visible if has children) */}
                                 {hasChildren && (
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); toggleExpand(folder.id); }}
-                                        className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-500 dark:text-zinc-500"
+                                        className={`p-1 rounded-md transition-all duration-200 ${
+                                            isExpanded 
+                                            ? 'bg-gray-200/60 dark:bg-zinc-700 text-gray-700 dark:text-zinc-200' 
+                                            : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-600 dark:text-zinc-400'
+                                        }`}
+                                        title={isExpanded ? "Tutup Folder" : "Buka Folder"}
                                     >
                                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                     </button>
@@ -277,6 +358,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentFilter, setFilter, onLo
         
         {/* Footer / Theme & Logout */}
         <div className="p-4 border-t border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-black space-y-2">
+           
+           {userRole === 'admin' && (
+               <button
+                 onClick={onOpenConfig}
+                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-900 transition-colors text-sm font-medium"
+               >
+                  <div className="flex items-center space-x-2">
+                      <Settings size={16} />
+                      <span>Konfigurasi</span>
+                  </div>
+               </button>
+           )}
+
            <button
              onClick={toggleTheme}
              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-200 dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 hover:bg-gray-300 dark:hover:bg-zinc-800 transition-colors text-sm font-medium"
