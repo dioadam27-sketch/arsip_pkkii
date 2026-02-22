@@ -289,10 +289,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         md:translate-x-0
       `}>
         {/* Header Logo */}
-        <div className="p-6 flex items-start justify-between border-b border-gray-200 dark:border-zinc-800">
+        <div className="p-6 flex items-start justify-between">
           <div className="flex items-start space-x-3">
              <img 
-               src="https://ppk2ipe.unair.ac.id/gambar/UNAIR_BRANDMARK_2025-02.png" 
+               src="https://pkkii.pendidikan.unair.ac.id/website/logo.jpeg" 
                alt="UNAIR Logo" 
                className="h-10 w-auto object-contain mt-1"
              />

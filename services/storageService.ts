@@ -215,6 +215,34 @@ export const renameFolder = async (id: string, newName: string): Promise<any> =>
 }
 
 /**
+ * Rename Archive (File)
+ */
+export const renameArchive = async (id: string, newTitle: string): Promise<any> => {
+    const apiUrl = getApiUrl();
+    try {
+        const payload = {
+            action: 'rename_archive',
+            id: id,
+            judul: newTitle
+        };
+
+        const response = await fetchWithRetry(apiUrl, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await handleResponse(response);
+        if (result.status === 'success') return result;
+        else throw new Error(result.message || "Gagal mengubah nama arsip.");
+
+    } catch (error) {
+        console.error("Rename Archive Error:", error);
+        throw error;
+    }
+}
+
+/**
  * Toggle Visibility (Public/Private)
  */
 export const toggleVisibility = async (id: string, type: 'folder' | 'archive', currentVisibility: 'public' | 'private'): Promise<any> => {

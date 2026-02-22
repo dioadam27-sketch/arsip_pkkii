@@ -49,9 +49,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8 md:mb-10">
           <img 
-            src="https://ppk2ipe.unair.ac.id/gambar/UNAIR_BRANDMARK_2025-02.png" 
+            src="https://pkkii.pendidikan.unair.ac.id/website/logo.jpeg" 
             alt="UNAIR Brandmark" 
-            className="h-24 md:h-32 w-auto mb-6 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500"
+            className="h-24 md:h-32 w-auto mb-6 object-contain hover:scale-105 transition-transform duration-500"
           />
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-center mb-2">Repo PKKII</h1>
           <p className="text-gray-500 dark:text-zinc-500 text-xs md:text-sm font-medium uppercase tracking-widest text-center">Universitas Airlangga</p>

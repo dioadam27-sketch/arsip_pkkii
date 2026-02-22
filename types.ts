@@ -28,12 +28,3 @@ export interface ArchiveDocument {
   folderId?: string;
   visibility?: 'public' | 'private'; // New property
 }
-
-export interface AIParsedData {
-  nomor_dokumen?: string;
-  judul: string;
-  kategori: string;
-  tahun: string;
-  deskripsi: string;
-  tags?: string[];
-}

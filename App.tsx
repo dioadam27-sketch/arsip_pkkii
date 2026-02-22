@@ -5,10 +5,11 @@ import { LoginPage } from './components/LoginPage';
 import { ConfirmModal } from './components/ConfirmModal';
 import { ConfigModal } from './components/ConfigModal'; 
 import { MoveModal } from './components/MoveModal';
+import { RenameModal } from './components/RenameModal';
 import { Toast, ToastProps } from './components/Toast'; // Import Toast
 import { ArchiveDocument, Folder } from './types';
-import { Search, Plus, FileText, Download, MoreVertical, Calendar, Tag, Filter, Clock, Scroll, Loader2, RefreshCw, AlertCircle, Menu, Wifi, WifiOff, Trash2, Eye, Folder as FolderIcon, Lock, Unlock, EyeOff, FolderInput, ArrowLeft, Bookmark } from 'lucide-react';
-import { fetchAllData, createFolder, deleteArchive, deleteFolder, renameFolder, toggleVisibility, moveArchive } from './services/storageService';
+import { Search, Plus, FileText, Download, MoreVertical, Calendar, Tag, Filter, Clock, Scroll, Loader2, RefreshCw, AlertCircle, Menu, Wifi, WifiOff, Trash2, Eye, Folder as FolderIcon, Lock, Unlock, EyeOff, FolderInput, ArrowLeft, Bookmark, Pencil } from 'lucide-react';
+import { fetchAllData, createFolder, deleteArchive, deleteFolder, renameFolder, toggleVisibility, moveArchive, renameArchive } from './services/storageService';
 
 export default function App() {
   // Session State
@@ -38,6 +39,9 @@ export default function App() {
   
   // Move State
   const [archiveToMove, setArchiveToMove] = useState<ArchiveDocument | null>(null);
+  
+  // Rename State
+  const [archiveToRename, setArchiveToRename] = useState<ArchiveDocument | null>(null);
 
   // Loading & Sync State
   const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +126,7 @@ export default function App() {
         const data = await fetchAllData();
         
         // Update State
-        setDocuments(data.archives);
+        setDocuments(data.archives || []);
         if (data.folders) {
             setFolders(data.folders);
         }
@@ -130,13 +134,17 @@ export default function App() {
         const now = new Date();
         setLastUpdated(now);
         lastUpdatedRef.current = now; 
+        
+        // Clear error if success
+        if (error) setError(null);
 
     } catch (error) {
         console.error("Error loading data:", error);
+        const errMsg = error instanceof Error ? error.message : "Gagal memuat data.";
         if (showLoadingSpinner) {
-             setError(error instanceof Error ? error.message : "Gagal memuat data.");
+             setError(errMsg);
         } else {
-             showToast("Gagal menyinkronkan data dengan server.", "error");
+             showToast(errMsg, "error");
         }
     } finally {
         setIsLoading(false);
@@ -333,12 +341,10 @@ export default function App() {
       const targetFolder = folders.find(f => f.id === newFolderId);
       const targetFolderName = targetFolder ? targetFolder.label : 'Baru';
 
-      // Optimistic Update: Remove from current view if filtering by folder, or update object properties
+      // Optimistic Update
       const movedArchive = archiveToMove;
       setArchiveToMove(null);
 
-      // We don't remove it from state immediately to avoid UI flickering, 
-      // but we update the folderId so if the user navigates, it's correct.
       setDocuments(prev => prev.map(d => 
           d.id === movedArchive.id 
           ? { ...d, folderId: newFolderId, kategori: targetFolderName } 
@@ -349,10 +355,32 @@ export default function App() {
           setIsSyncing(true);
           await moveArchive(movedArchive.id, newFolderId);
           showToast(`Berhasil dipindahkan ke "${targetFolderName}"`, 'success');
-          // No need to reload data if optimistic update is correct, but safe to do so quietly
           loadData(false);
       } catch (e) {
           showToast("Gagal memindahkan arsip.", 'error');
+          loadData(false); // Revert
+      } finally {
+          setIsSyncing(false);
+      }
+  };
+
+  const confirmRenameArchive = async (newTitle: string) => {
+      if (!archiveToRename) return;
+
+      const id = archiveToRename.id;
+      setArchiveToRename(null);
+
+      // Optimistic Update
+      setDocuments(prev => prev.map(d => 
+          d.id === id ? { ...d, judul: newTitle } : d
+      ));
+
+      try {
+          setIsSyncing(true);
+          await renameArchive(id, newTitle);
+          showToast("Nama arsip berhasil diubah.", 'success');
+      } catch (e) {
+          showToast("Gagal mengubah nama arsip.", 'error');
           loadData(false); // Revert
       } finally {
           setIsSyncing(false);
@@ -405,13 +433,13 @@ export default function App() {
         }
     }
 
-    // Search
+    // Search (Safe guarded against null/undefined)
     if (searchQuery) {
         const q = searchQuery.toLowerCase();
         data = data.filter(d => 
-            d.judul.toLowerCase().includes(q) || 
-            d.nomorDokumen.toLowerCase().includes(q) ||
-            (d.tags && d.tags.some(t => t.toLowerCase().includes(q)))
+            String(d.judul || '').toLowerCase().includes(q) || 
+            String(d.nomorDokumen || '').toLowerCase().includes(q) ||
+            (Array.isArray(d.tags) && d.tags.some(t => String(t || '').toLowerCase().includes(q)))
         );
     }
 
@@ -476,6 +504,14 @@ export default function App() {
         isLoading={isSyncing}
       />
 
+      <RenameModal
+        isOpen={!!archiveToRename}
+        onClose={() => setArchiveToRename(null)}
+        onRename={confirmRenameArchive}
+        currentTitle={archiveToRename?.judul || ''}
+        isLoading={isSyncing}
+      />
+
       <ConfigModal 
         isOpen={showConfigModal}
         onClose={() => setShowConfigModal(false)}
@@ -505,7 +541,7 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden ml-0 md:ml-64 transition-all duration-300">
         
         {/* Top Navigation Bar */}
-        <header className="bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between sticky top-0 z-10 transition-colors duration-300">
+        <header className="bg-white dark:bg-zinc-900 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between sticky top-0 z-10 transition-colors duration-300">
             <div className="flex-1 max-w-2xl flex items-center gap-3">
                 <button 
                   onClick={() => setIsMobileSidebarOpen(true)}
@@ -513,6 +549,12 @@ export default function App() {
                 >
                   <Menu size={24} />
                 </button>
+
+                <img 
+                  src="https://pkkii.pendidikan.unair.ac.id/website/logo.jpeg" 
+                  alt="Logo" 
+                  className="h-8 w-auto md:hidden" 
+                />
 
                 <div className="relative group w-full">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -583,6 +625,9 @@ export default function App() {
                     <button onClick={handleRefresh} className="px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-lg flex items-center shadow-sm">
                         <RefreshCw size={16} className="mr-2" /> Coba Lagi
                     </button>
+                    <p className="mt-4 text-xs text-gray-400 dark:text-zinc-500">
+                        Pastikan URL API di konfigurasi sudah benar (Menu Sidebar {'>'} Config).
+                    </p>
                 </div>
             ) : (
                 <>
@@ -666,6 +711,13 @@ export default function App() {
                                         {/* Admin Action Buttons (Top Right) */}
                                         {userRole === 'admin' && (
                                             <div className="absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setArchiveToRename(doc); }}
+                                                    className="p-1.5 bg-white dark:bg-zinc-800 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700"
+                                                    title="Ubah Nama Arsip"
+                                                >
+                                                    <Pencil size={14} />
+                                                </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setArchiveToMove(doc); }}
                                                     className="p-1.5 bg-white dark:bg-zinc-800 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700"
