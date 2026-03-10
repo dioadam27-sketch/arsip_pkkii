@@ -168,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             />
                                         )}
                                     </div>
-                                    <span className="truncate flex-1">{folder.label}</span>
+                                    <span className="truncate flex-1" title={folder.label}>{folder.label}</span>
                                 </button>
                             )}
                             
@@ -283,7 +283,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <div className={`
-        fixed top-0 left-0 h-full w-64 bg-white dark:bg-black text-gray-500 dark:text-zinc-400 border-r border-gray-200 dark:border-zinc-800 shadow-xl z-50
+        fixed top-0 left-0 h-full w-80 bg-white dark:bg-black text-gray-500 dark:text-zinc-400 border-r border-gray-200 dark:border-zinc-800 shadow-xl z-50
         transform transition-transform duration-300 ease-in-out flex flex-col
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
         md:translate-x-0

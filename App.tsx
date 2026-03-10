@@ -36,6 +36,7 @@ export default function App() {
   
   // Delete State
   const [archiveToDelete, setArchiveToDelete] = useState<{id: string, judul: string} | null>(null);
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   
   // Move State
   const [archiveToMove, setArchiveToMove] = useState<ArchiveDocument | null>(null);
@@ -538,7 +539,7 @@ export default function App() {
         onOpenConfig={() => setShowConfigModal(true)} 
       />
       
-      <main className="flex-1 flex flex-col h-screen overflow-hidden ml-0 md:ml-64 transition-all duration-300">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden ml-0 md:ml-80 transition-all duration-300">
         
         {/* Top Navigation Bar */}
         <header className="bg-white dark:bg-zinc-900 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between sticky top-0 z-10 transition-colors duration-300">
@@ -591,6 +592,24 @@ export default function App() {
                     <RefreshCw size={20} />
                 </button>
                 
+                {selectedDocs.length > 0 && (
+                    <button
+                        onClick={() => {
+                            selectedDocs.forEach(id => {
+                                const doc = documents.find(d => d.id === id);
+                                if (doc && doc.fileUrl) {
+                                    window.open(getDownloadUrl(doc.fileUrl), '_blank');
+                                }
+                            });
+                            setSelectedDocs([]);
+                        }}
+                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+                    >
+                        <Download size={18} />
+                        <span className="hidden md:inline">Download ({selectedDocs.length})</span>
+                    </button>
+                )}
+
                 {userRole === 'admin' && (
                     <button 
                         onClick={() => setShowAddModal(true)}
@@ -697,115 +716,106 @@ export default function App() {
                              {currentSubfolders.length > 0 && (
                                 <h3 className="text-sm font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Dokumen</h3>
                              )}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 pb-20 md:pb-10">
+                            <div className="flex flex-col gap-2 pb-20 md:pb-10">
                                 {filteredDocs.map((doc) => (
-                                    <div key={doc.id} className="group bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 p-5 hover:border-blue-500/30 dark:hover:border-amber-500/50 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-default relative">
+                                    <div key={doc.id} className="group bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-4 hover:border-blue-500/30 dark:hover:border-amber-500/50 hover:shadow-md transition-all duration-300 flex items-center gap-4 cursor-default relative">
                                         
-                                        {/* Status Indicator (Private) */}
-                                        {doc.visibility === 'private' && (
-                                            <div className="absolute top-3 left-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold flex items-center border border-red-200 dark:border-red-800 z-10">
-                                                <Lock size={10} className="mr-1" /> Privat
-                                            </div>
-                                        )}
+                                        <input 
+                                            type="checkbox"
+                                            checked={selectedDocs.includes(doc.id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedDocs([...selectedDocs, doc.id]);
+                                                } else {
+                                                    setSelectedDocs(selectedDocs.filter(id => id !== doc.id));
+                                                }
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
 
-                                        {/* Admin Action Buttons (Top Right) */}
-                                        {userRole === 'admin' && (
-                                            <div className="absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setArchiveToRename(doc); }}
-                                                    className="p-1.5 bg-white dark:bg-zinc-800 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700"
-                                                    title="Ubah Nama Arsip"
-                                                >
-                                                    <Pencil size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setArchiveToMove(doc); }}
-                                                    className="p-1.5 bg-white dark:bg-zinc-800 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700"
-                                                    title="Pindahkan Arsip"
-                                                >
-                                                    <FolderInput size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleToggleVisibility(doc.id, 'archive', doc.visibility || 'public'); }}
-                                                    className={`p-1.5 rounded-lg shadow-sm border ${
-                                                        doc.visibility === 'private' 
-                                                        ? 'bg-red-50 dark:bg-red-900/30 text-red-500 border-red-100' 
-                                                        : 'bg-white dark:bg-zinc-800 text-gray-400 hover:text-gray-600 border-gray-100 dark:border-zinc-700'
-                                                    }`}
-                                                    title={doc.visibility === 'private' ? "Ubah ke Publik" : "Ubah ke Privat"}
-                                                >
-                                                    {doc.visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
-                                                </button>
-                                                <button 
-                                                    onClick={(e) => requestDeleteArchive(e, doc.id, doc.judul)}
-                                                    className="p-1.5 bg-white dark:bg-zinc-800 text-gray-400 hover:text-red-500 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700"
-                                                    title="Hapus Arsip"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        )}
+                                        {/* Icon */}
+                                        <div className={`p-2 rounded-lg shrink-0 ${
+                                            doc.kategori.includes('SK') ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                                            'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500'
+                                        }`}>
+                                            <FileText size={20} />
+                                        </div>
 
-                                        {/* Card Content (Click to View) */}
-                                        <div className="flex-1 cursor-pointer pt-6" onClick={() => doc.fileUrl && window.open(doc.fileUrl, '_blank')}>
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className={`p-3 rounded-xl ${
-                                                    doc.kategori.includes('SK') ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
-                                                    'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500'
-                                                }`}>
-                                                    <FileText size={24} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span className="text-[10px] font-bold tracking-wider uppercase text-gray-400 dark:text-zinc-500 mb-1 block">
-                                                    {doc.nomorDokumen}
-                                                </span>
-                                                <h3 className="font-bold text-gray-900 dark:text-zinc-200 mb-2 line-clamp-2 leading-snug group-hover:text-blue-800 dark:group-hover:text-amber-400 transition-colors text-sm md:text-base">
+                                        {/* Main Info */}
+                                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => doc.fileUrl && window.open(doc.fileUrl, '_blank')}>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-gray-900 dark:text-zinc-200 text-sm truncate group-hover:text-blue-800 dark:group-hover:text-amber-400 transition-colors">
                                                     {doc.judul}
                                                 </h3>
-                                                <div className="flex flex-wrap gap-1 mb-4">
-                                                    {doc.tags.slice(0, 2).map((tag, idx) => (
-                                                        <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 border border-gray-200 dark:border-zinc-700">
-                                                            <Tag size={10} className="mr-1"/> {tag}
-                                                        </span>
-                                                    ))}
-                                                </div>
+                                                {doc.visibility === 'private' && (
+                                                    <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center border border-red-200 dark:border-red-800 shrink-0">
+                                                        <Lock size={10} className="mr-1" /> Privat
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-zinc-500 mt-0.5">
+                                                <span className="font-medium">{doc.nomorDokumen}</span>
+                                                <span>•</span>
+                                                <span>{doc.tahun}</span>
+                                                <span>•</span>
+                                                <span>{doc.fileSize}</span>
                                             </div>
                                         </div>
 
-                                        {/* Meta & Actions */}
-                                        <div className="mt-auto">
-                                            <div className="pt-4 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-500 mb-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <Calendar size={12} />
-                                                    <span>{doc.tahun}</span>
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    doc.fileUrl && window.open(doc.fileUrl, '_blank');
+                                                }}
+                                                className="flex items-center px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                            >
+                                                <Eye size={14} className="mr-1.5" /> Lihat
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    doc.fileUrl && window.open(getDownloadUrl(doc.fileUrl), '_blank');
+                                                }}
+                                                className="flex items-center px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-xs font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+                                            >
+                                                <Download size={14} className="mr-1.5" /> Unduh
+                                            </button>
+                                            
+                                            {/* Admin Action Buttons */}
+                                            {userRole === 'admin' && (
+                                                <div className="flex items-center gap-1 ml-2 border-l border-gray-200 dark:border-zinc-700 pl-2">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setArchiveToRename(doc); }}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                        title="Ubah Nama"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setArchiveToMove(doc); }}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                        title="Pindahkan"
+                                                    >
+                                                        <FolderInput size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleVisibility(doc.id, 'archive', doc.visibility || 'public'); }}
+                                                        className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                        title={doc.visibility === 'private' ? "Ubah ke Publik" : "Ubah ke Privat"}
+                                                    >
+                                                        {doc.visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => requestDeleteArchive(e, doc.id, doc.judul)}
+                                                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
                                                 </div>
-                                                <div className="flex items-center space-x-3">
-                                                    <span>{doc.fileSize}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Action Buttons for Guest & Admin */}
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        doc.fileUrl && window.open(doc.fileUrl, '_blank');
-                                                    }}
-                                                    className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                                                >
-                                                    <Eye size={16} className="mr-2" /> Lihat
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        doc.fileUrl && window.open(getDownloadUrl(doc.fileUrl), '_blank');
-                                                    }}
-                                                    className="flex-1 flex items-center justify-center px-3 py-2 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
-                                                >
-                                                    <Download size={16} className="mr-2" /> Unduh
-                                                </button>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
