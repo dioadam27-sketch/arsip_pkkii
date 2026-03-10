@@ -717,6 +717,21 @@ export default function App() {
                                 <h3 className="text-sm font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Dokumen</h3>
                              )}
                             <div className="flex flex-col gap-2 pb-20 md:pb-10">
+                                <div className="flex items-center gap-4 p-4 border-b border-gray-200 dark:border-zinc-800">
+                                    <input 
+                                        type="checkbox"
+                                        checked={selectedDocs.length === filteredDocs.length && filteredDocs.length > 0}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedDocs(filteredDocs.map(d => d.id));
+                                            } else {
+                                                setSelectedDocs([]);
+                                            }
+                                        }}
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-500 dark:text-zinc-400">Pilih Semua</span>
+                                </div>
                                 {filteredDocs.map((doc) => (
                                     <div key={doc.id} className="group bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-4 hover:border-blue-500/30 dark:hover:border-amber-500/50 hover:shadow-md transition-all duration-300 flex items-center gap-4 cursor-default relative">
                                         
