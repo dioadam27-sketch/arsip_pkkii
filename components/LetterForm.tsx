@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { X, Upload, Tag, CheckCircle, Loader2, FolderOpen, Settings, AlertCircle, FileText, Trash2, Lock, Globe, Sparkles } from 'lucide-react';
 import { ArchiveDocument, Folder } from '../types';
 import { uploadToDrive } from '../services/storageService';
+import { getGeminiKey } from '../services/storageService';
 import { GoogleGenAI, Type } from "@google/genai";
 
 interface ArchiveFormProps {
@@ -41,7 +42,7 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
         const dataUrl = await base64Promise;
         const base64Data = dataUrl.split(',')[1];
 
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+        const ai = new GoogleGenAI({ apiKey: await getGeminiKey() });
 
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
