@@ -25,6 +25,7 @@ export interface ArchiveDocument {
   tags: string[];
   fileSize?: string;
   fileUrl?: string; 
+  fileExtension?: string; // New property
   folderId?: string;
   visibility?: 'public' | 'private'; // New property
 }

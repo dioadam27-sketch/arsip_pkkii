@@ -1,7 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { X, Upload, Tag, CheckCircle, Loader2, FolderOpen, Settings, AlertCircle, FileText, Trash2, Lock, Globe } from 'lucide-react';
+import { X, Upload, Tag, CheckCircle, Loader2, FolderOpen, Settings, AlertCircle, FileText, Trash2, Lock, Globe, Sparkles } from 'lucide-react';
 import { ArchiveDocument, Folder } from '../types';
 import { uploadToDrive } from '../services/storageService';
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface ArchiveFormProps {
   onClose: () => void;
@@ -16,7 +17,62 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]); 
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{current: number, total: number} | null>(null); 
+  
+  const analyzeDocument = async (file: File) => {
+    setIsAnalyzing(true);
+    try {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+        });
+        const dataUrl = await base64Promise;
+        const base64Data = dataUrl.split(',')[1];
+
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: {
+                parts: [
+                    {
+                        inlineData: {
+                            mimeType: file.type,
+                            data: base64Data,
+                        },
+                    },
+                    {
+                        text: "Analyze this document and extract: nomor surat, perihal (judul), deskripsi, kategori, tahun, tags. Return as JSON.",
+                    },
+                ],
+            },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        nomorDokumen: { type: Type.STRING },
+                        judul: { type: Type.STRING },
+                        deskripsi: { type: Type.STRING },
+                        kategori: { type: Type.STRING },
+                        tahun: { type: Type.STRING },
+                        tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    },
+                },
+            },
+        });
+
+        const result = JSON.parse(response.text!);
+        setFormData(prev => ({ ...prev, ...result }));
+    } catch (error) {
+        console.error("Analysis failed:", error);
+        alert("Gagal menganalisis dokumen dengan AI.");
+    } finally {
+        setIsAnalyzing(false);
+    }
+  };
   
   const [isSuccess, setIsSuccess] = useState(false); 
   const [errorState, setErrorState] = useState<string | null>(null); 
@@ -160,7 +216,10 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
             const file = selectedFiles[i];
             setUploadProgress({ current: i + 1, total: selectedFiles.length });
 
+            // Extract extension safely
+            const fileExtension = file.name.includes('.') ? file.name.split('.').pop() || '' : '';
             const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+            
             const docTitle = selectedFiles.length > 1 
                 ? fileNameWithoutExt
                 : (formData.judul || fileNameWithoutExt);
@@ -169,7 +228,8 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
                 ...formData,
                 judul: docTitle,
                 kategori: kategoriLabel,
-                folderId: selectedFolderId 
+                folderId: selectedFolderId,
+                fileExtension: fileExtension // Pass extension to storageService
             };
 
             await uploadToDrive(file, uploadData);
@@ -340,14 +400,25 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
                                     <p className="text-xs text-gray-500 dark:text-zinc-500">{(file.size / 1024).toFixed(1)} KB</p>
                                 </div>
                             </div>
-                            <button 
-                                type="button"
-                                onClick={() => removeFile(idx)}
-                                disabled={isSubmitting}
-                                className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 rounded-lg transition-colors ml-2"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+                            <div className="flex items-center">
+                                <button 
+                                    type="button"
+                                    onClick={() => analyzeDocument(file)}
+                                    disabled={isSubmitting || isAnalyzing}
+                                    className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-gray-400 hover:text-amber-500 rounded-lg transition-colors mr-2"
+                                    title="Analisis dengan AI"
+                                >
+                                    {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => removeFile(idx)}
+                                    disabled={isSubmitting}
+                                    className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 rounded-lg transition-colors ml-2"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

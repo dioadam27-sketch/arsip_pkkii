@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS archives (
     file_url VARCHAR(2083),
     file_path VARCHAR(255), -- Path fisik di server
     file_size VARCHAR(50), 
+    file_extension VARCHAR(10),
     folder_id VARCHAR(50), 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     

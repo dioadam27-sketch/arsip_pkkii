@@ -594,13 +594,33 @@ export default function App() {
                 
                 {selectedDocs.length > 0 && (
                     <button
-                        onClick={() => {
-                            selectedDocs.forEach(id => {
+                        onClick={async () => {
+                            const files = selectedDocs.map(id => {
                                 const doc = documents.find(d => d.id === id);
-                                if (doc && doc.fileUrl) {
-                                    window.open(getDownloadUrl(doc.fileUrl), '_blank');
-                                }
+                                // Use stored extension if available, otherwise fallback
+                                const extension = doc?.fileExtension ? `.${doc.fileExtension.replace(/^\./, '')}` : '';
+                                
+                                return { 
+                                    url: getDownloadUrl(doc?.fileUrl || ''), 
+                                    name: `${doc?.judul || 'document'}${extension}` 
+                                };
                             });
+                            
+                            const response = await fetch('/api/bulk-download', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ files })
+                            });
+                            
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'documents.zip';
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            
                             setSelectedDocs([]);
                         }}
                         className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
@@ -774,6 +794,8 @@ export default function App() {
                                                 <span>{doc.tahun}</span>
                                                 <span>•</span>
                                                 <span>{doc.fileSize}</span>
+                                                <span>•</span>
+                                                <span className="text-[10px] bg-gray-200 dark:bg-zinc-700 px-1 rounded">Ext: {doc.fileExtension || 'None'}</span>
                                             </div>
                                         </div>
 

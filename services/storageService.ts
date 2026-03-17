@@ -120,6 +120,7 @@ export const uploadToDrive = async (file: File, metadata: Partial<ArchiveDocumen
 
     // --- STEP 2: Simpan Metadata ke MySQL (PHP) ---
     console.log("Step 2: Saving metadata to Database...");
+    console.log("Metadata received in uploadToDrive:", metadata);
     
     const dbPayload = {
         action: 'upload',
@@ -134,8 +135,10 @@ export const uploadToDrive = async (file: File, metadata: Partial<ArchiveDocumen
         
         fileUrl: driveUrl,
         driveId: driveId,
-        fileSize: fileSize || (file.size / 1024).toFixed(2) + ' KB'
+        fileSize: fileSize || (file.size / 1024).toFixed(2) + ' KB',
+        fileExtension: metadata.fileExtension || (file.name.includes('.') ? file.name.split('.').pop() || '' : '')
     };
+    console.log("Uploading file:", file.name, "Computed extension:", dbPayload.fileExtension);
 
     const phpResponse = await fetch(phpUrl, {
         method: "POST",

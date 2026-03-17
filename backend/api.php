@@ -116,6 +116,7 @@ class ArchiveAPI {
                     "tags" => !empty($row['tags']) ? explode(", ", $row['tags']) : [],
                     "fileUrl" => $row['file_url'],
                     "fileSize" => $row['file_size'],
+                    "fileExtension" => isset($row['file_extension']) ? $row['file_extension'] : '',
                     "tanggalUpload" => $row['created_at'],
                     "folderId" => $row['folder_id'],
                     "visibility" => isset($row['visibility']) ? $row['visibility'] : 'public'
@@ -151,6 +152,7 @@ class ArchiveAPI {
         $id = uniqid('doc_');
         $tags = is_array($data['tags']) ? implode(", ", $data['tags']) : $data['tags'];
         $driveId = isset($data['driveId']) ? $data['driveId'] : '';
+        $fileExtension = isset($data['fileExtension']) ? $data['fileExtension'] : '';
         $folderId = !empty($data['folderId']) ? $data['folderId'] : null;
         $visibility = isset($data['visibility']) ? $data['visibility'] : 'public';
         
@@ -165,11 +167,12 @@ class ArchiveAPI {
             $data['fileUrl'], 
             $driveId,
             isset($data['fileSize']) ? $data['fileSize'] : '0 KB',
-            $folderId
+            $folderId,
+            $fileExtension
         ];
 
         try {
-            $sql = "INSERT INTO archives (id, nomor_dokumen, judul, deskripsi, kategori, tahun, tags, file_url, file_path, file_size, folder_id, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO archives (id, nomor_dokumen, judul, deskripsi, kategori, tahun, tags, file_url, file_path, file_size, folder_id, file_extension, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->pdo->prepare($sql);
             $fullParams = $params;
             $fullParams[] = $visibility;
