@@ -21,6 +21,16 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
   const [uploadProgress, setUploadProgress] = useState<{current: number, total: number} | null>(null); 
   
   const analyzeDocument = async (file: File) => {
+    const supportedTypes = [
+        'image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif',
+        'application/pdf'
+    ];
+
+    if (!supportedTypes.includes(file.type)) {
+        alert(`Format file "${file.type}" tidak didukung untuk analisis AI. Silakan gunakan PDF atau Gambar.`);
+        return;
+    }
+
     setIsAnalyzing(true);
     try {
         const reader = new FileReader();
