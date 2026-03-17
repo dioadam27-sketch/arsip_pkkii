@@ -3,6 +3,7 @@ import { ArchiveDocument, Folder } from "../types";
 // --- KONFIGURASI API ---
 const STORAGE_PHP_KEY = 'pkkii_api_url';
 const STORAGE_DRIVE_KEY = 'pkkii_drive_url';
+const STORAGE_GEMINI_KEY = 'pkkii_gemini_key';
 
 // Default Fallbacks
 const DEFAULT_PHP_URL = "https://pkkii.pendidikan.unair.ac.id/arsip/api.php";
@@ -28,6 +29,44 @@ export const getDriveScriptUrl = (): string => {
 
 export const saveDriveScriptUrl = (url: string): void => {
     localStorage.setItem(STORAGE_DRIVE_KEY, url.trim());
+}
+
+export const getGeminiKey = async (): Promise<string> => {
+    const apiUrl = getApiUrl();
+    try {
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_gemini_key' })
+        });
+        const result = await handleResponse(response);
+        return result.status === 'success' ? (result.data?.key || '') : '';
+    } catch (error) {
+        console.error("Get Gemini Key Error:", error);
+        return '';
+    }
+}
+
+export const saveGeminiKey = async (key: string): Promise<void> => {
+    const apiUrl = getApiUrl();
+    try {
+        const payload = {
+            action: 'save_gemini_key',
+            key: key.trim()
+        };
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await handleResponse(response);
+        if (result.status !== 'success') {
+            throw new Error(result.message || "Gagal menyimpan API Key.");
+        }
+    } catch (error) {
+        console.error("Save Gemini Key Error:", error);
+        throw error;
+    }
 }
 
 // --- UTILS ---

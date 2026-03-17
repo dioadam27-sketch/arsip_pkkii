@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Server, Check, HardDrive } from 'lucide-react';
-import { getApiUrl, saveApiUrl, getDriveScriptUrl, saveDriveScriptUrl } from '../services/storageService';
+import { X, Save, Server, Check, HardDrive, Key } from 'lucide-react';
+import { getApiUrl, saveApiUrl, getDriveScriptUrl, saveDriveScriptUrl, getGeminiKey, saveGeminiKey } from '../services/storageService';
 
 interface ConfigModalProps {
   isOpen: boolean;
@@ -11,28 +11,46 @@ interface ConfigModalProps {
 export const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave }) => {
   const [phpUrl, setPhpUrl] = useState('');
   const [driveUrl, setDriveUrl] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [isGeminiUnlocked, setIsGeminiUnlocked] = useState(false);
+  const [geminiPassword, setGeminiPassword] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
         setPhpUrl(getApiUrl());
         setDriveUrl(getDriveScriptUrl());
+        getGeminiKey().then(setGeminiKey);
+        setIsGeminiUnlocked(false);
+        setGeminiPassword('');
         setSaved(false);
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleUnlockGemini = () => {
+    if (geminiPassword === '332211') {
+        setIsGeminiUnlocked(true);
+        setGeminiPassword('');
+    } else {
+        alert("Password salah!");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phpUrl.trim() && driveUrl.trim()) {
         saveApiUrl(phpUrl);
         saveDriveScriptUrl(driveUrl);
+        if (isGeminiUnlocked) {
+            await saveGeminiKey(geminiKey);
+        }
         setSaved(true);
         setTimeout(() => {
             onSave();
             onClose();
         }, 800);
     } else {
-        alert("Mohon isi kedua URL (API Backend & File Storage)");
+        alert("Mohon isi URL (API Backend & File Storage)");
     }
   };
 
@@ -92,6 +110,42 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSav
                 />
                 <p className="mt-2 text-xs text-gray-500 dark:text-zinc-500">
                     Endpoint Web App Google Apps Script untuk upload file fisik ke Drive.
+                </p>
+            </div>
+
+            {/* Gemini Key Input */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 flex items-center">
+                    <Key size={14} className="mr-2"/> Gemini API Key
+                </label>
+                {!isGeminiUnlocked ? (
+                    <div className="flex space-x-2">
+                        <input 
+                            type="password" 
+                            placeholder="Masukkan password untuk edit"
+                            className="flex-grow px-4 py-3 bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-amber-500 focus:border-transparent text-gray-900 dark:text-zinc-100 font-mono text-sm shadow-inner"
+                            value={geminiPassword}
+                            onChange={(e) => setGeminiPassword(e.target.value)}
+                        />
+                        <button 
+                            type="button"
+                            onClick={handleUnlockGemini}
+                            className="px-4 py-2 bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-zinc-200 rounded-lg hover:bg-gray-300 dark:hover:bg-zinc-600"
+                        >
+                            Buka
+                        </button>
+                    </div>
+                ) : (
+                    <input 
+                        type="password" 
+                        placeholder="AIza..."
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-amber-500 focus:border-transparent text-gray-900 dark:text-zinc-100 font-mono text-sm shadow-inner"
+                        value={geminiKey}
+                        onChange={(e) => setGeminiKey(e.target.value)}
+                    />
+                )}
+                <p className="mt-2 text-xs text-gray-500 dark:text-zinc-500">
+                    {isGeminiUnlocked ? "API Key dapat diubah." : "Masukkan password untuk mengubah API Key."}
                 </p>
             </div>
 

@@ -95,6 +95,12 @@ class ArchiveAPI {
             case 'rename_archive':
                 $this->renameArchive($data);
                 break;
+            case 'save_gemini_key':
+                $this->saveGeminiKey($data);
+                break;
+            case 'get_gemini_key':
+                $this->getGeminiKey();
+                break;
             default:
                 $this->response('error', 'Invalid Action: ' . $action, 400);
         }
@@ -286,6 +292,27 @@ class ArchiveAPI {
             $this->response('success', 'Archive renamed successfully');
         } catch (PDOException $e) {
             $this->response('error', "Rename failed: " . $e->getMessage(), 500);
+        }
+    }
+
+    private function saveGeminiKey($data) {
+        try {
+            $key = $data['key'] ?? '';
+            $stmt = $this->pdo->prepare("INSERT INTO settings (setting_key, value) VALUES ('gemini_api_key', ?) ON DUPLICATE KEY UPDATE value = ?");
+            $stmt->execute([$key, $key]);
+            $this->response('success', 'API Key berhasil disimpan');
+        } catch (PDOException $e) {
+            $this->response('error', "Database Error: " . $e->getMessage(), 500);
+        }
+    }
+
+    private function getGeminiKey() {
+        try {
+            $stmt = $this->pdo->query("SELECT value FROM settings WHERE setting_key = 'gemini_api_key'");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $this->response('success', 'Data fetched', 200, ['key' => $row['value'] ?? '']);
+        } catch (PDOException $e) {
+            $this->response('error', "Database Error: " . $e->getMessage(), 500);
         }
     }
 

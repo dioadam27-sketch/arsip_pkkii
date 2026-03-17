@@ -78,7 +78,8 @@ export const LetterForm: React.FC<ArchiveFormProps> = ({ onClose, onSubmit, fold
         setFormData(prev => ({ ...prev, ...result }));
     } catch (error) {
         console.error("Analysis failed:", error);
-        alert("Gagal menganalisis dokumen dengan AI.");
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        alert(`Gagal menganalisis dokumen dengan AI: ${errorMessage}`);
     } finally {
         setIsAnalyzing(false);
     }
