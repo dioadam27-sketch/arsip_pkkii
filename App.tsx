@@ -44,6 +44,9 @@ export default function App() {
   // Rename State
   const [archiveToRename, setArchiveToRename] = useState<ArchiveDocument | null>(null);
 
+  // Expanded State for Descriptions
+  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
+
   // Loading & Sync State
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -89,6 +92,18 @@ export default function App() {
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const toggleExpandDoc = (id: string) => {
+    setExpandedDocs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const handleLogin = (role: 'admin' | 'guest') => {
@@ -752,110 +767,140 @@ export default function App() {
                                     />
                                     <span className="text-sm text-gray-500 dark:text-zinc-400">Pilih Semua</span>
                                 </div>
-                                {filteredDocs.map((doc) => (
-                                    <div key={doc.id} className="group bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-4 hover:border-blue-500/30 dark:hover:border-amber-500/50 hover:shadow-md transition-all duration-300 flex items-center gap-4 cursor-default relative">
-                                        
-                                        <input 
-                                            type="checkbox"
-                                            checked={selectedDocs.includes(doc.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedDocs([...selectedDocs, doc.id]);
-                                                } else {
-                                                    setSelectedDocs(selectedDocs.filter(id => id !== doc.id));
-                                                }
-                                            }}
-                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                        />
+                                 {filteredDocs.map((doc) => {
+                                    const isExpanded = expandedDocs.has(doc.id);
+                                    return (
+                                    <div key={doc.id} className="group bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 p-4 hover:border-blue-500/30 dark:hover:border-amber-500/50 hover:shadow-md transition-all duration-300 flex flex-col gap-3 cursor-default relative">
+                                        <div className="flex items-center gap-4">
+                                            <input 
+                                                type="checkbox"
+                                                checked={selectedDocs.includes(doc.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedDocs([...selectedDocs, doc.id]);
+                                                    } else {
+                                                        setSelectedDocs(selectedDocs.filter(id => id !== doc.id));
+                                                    }
+                                                }}
+                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
 
-                                        {/* Icon */}
-                                        <div className={`p-2 rounded-lg shrink-0 ${
-                                            doc.kategori.includes('SK') ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
-                                            'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500'
-                                        }`}>
-                                            <FileText size={20} />
-                                        </div>
+                                            {/* Icon */}
+                                            <div className={`p-2 rounded-lg shrink-0 ${
+                                                doc.kategori.includes('SK') ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                                                'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500'
+                                            }`}>
+                                                <FileText size={20} />
+                                            </div>
 
-                                        {/* Main Info */}
-                                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => doc.fileUrl && window.open(doc.fileUrl, '_blank')}>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-gray-900 dark:text-zinc-200 text-sm truncate group-hover:text-blue-800 dark:group-hover:text-amber-400 transition-colors">
-                                                    {doc.judul}
-                                                </h3>
-                                                {doc.visibility === 'private' && (
-                                                    <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center border border-red-200 dark:border-red-800 shrink-0">
-                                                        <Lock size={10} className="mr-1" /> Privat
-                                                    </span>
+                                            {/* Main Info */}
+                                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleExpandDoc(doc.id)}>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-gray-900 dark:text-zinc-200 text-sm truncate group-hover:text-blue-800 dark:group-hover:text-amber-400 transition-colors">
+                                                        {doc.judul}
+                                                    </h3>
+                                                    {doc.visibility === 'private' && (
+                                                        <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center border border-red-200 dark:border-red-800 shrink-0">
+                                                            <Lock size={10} className="mr-1" /> Privat
+                                                        </span>
+                                                    )}
+                                                    {doc.deskripsi && (
+                                                        <button 
+                                                            className={`ml-auto p-1 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                            title="Lihat Deskripsi"
+                                                        >
+                                                            <Menu size={14} className="text-gray-400" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-zinc-500 mt-0.5">
+                                                    <span className="font-medium">{doc.nomorDokumen}</span>
+                                                    <span>•</span>
+                                                    <span>{doc.tahun}</span>
+                                                    <span>•</span>
+                                                    <span>{doc.fileSize}</span>
+                                                    <span>•</span>
+                                                    <span className="text-[10px] bg-gray-200 dark:bg-zinc-700 px-1 rounded">Ext: {doc.fileExtension || 'None'}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        doc.fileUrl && window.open(doc.fileUrl, '_blank');
+                                                    }}
+                                                    className="flex items-center px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                                >
+                                                    <Eye size={14} className="mr-1.5" /> Lihat
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        doc.fileUrl && window.open(getDownloadUrl(doc.fileUrl), '_blank');
+                                                    }}
+                                                    className="flex items-center px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-xs font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+                                                >
+                                                    <Download size={14} className="mr-1.5" /> Unduh
+                                                </button>
+                                                
+                                                {/* Admin Action Buttons */}
+                                                {userRole === 'admin' && (
+                                                    <div className="flex items-center gap-1 ml-2 border-l border-gray-200 dark:border-zinc-700 pl-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setArchiveToRename(doc); }}
+                                                            className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                            title="Ubah Nama"
+                                                        >
+                                                            <Pencil size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setArchiveToMove(doc); }}
+                                                            className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                            title="Pindahkan"
+                                                        >
+                                                            <FolderInput size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleToggleVisibility(doc.id, 'archive', doc.visibility || 'public'); }}
+                                                            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                            title={doc.visibility === 'private' ? "Ubah ke Publik" : "Ubah ke Privat"}
+                                                        >
+                                                            {doc.visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => requestDeleteArchive(e, doc.id, doc.judul)}
+                                                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-zinc-500 mt-0.5">
-                                                <span className="font-medium">{doc.nomorDokumen}</span>
-                                                <span>•</span>
-                                                <span>{doc.tahun}</span>
-                                                <span>•</span>
-                                                <span>{doc.fileSize}</span>
-                                                <span>•</span>
-                                                <span className="text-[10px] bg-gray-200 dark:bg-zinc-700 px-1 rounded">Ext: {doc.fileExtension || 'None'}</span>
-                                            </div>
                                         </div>
 
-                                        {/* Action Buttons */}
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    doc.fileUrl && window.open(doc.fileUrl, '_blank');
-                                                }}
-                                                className="flex items-center px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                                            >
-                                                <Eye size={14} className="mr-1.5" /> Lihat
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    doc.fileUrl && window.open(getDownloadUrl(doc.fileUrl), '_blank');
-                                                }}
-                                                className="flex items-center px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-xs font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
-                                            >
-                                                <Download size={14} className="mr-1.5" /> Unduh
-                                            </button>
-                                            
-                                            {/* Admin Action Buttons */}
-                                            {userRole === 'admin' && (
-                                                <div className="flex items-center gap-1 ml-2 border-l border-gray-200 dark:border-zinc-700 pl-2">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setArchiveToRename(doc); }}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                                        title="Ubah Nama"
-                                                    >
-                                                        <Pencil size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setArchiveToMove(doc); }}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-amber-500 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                                        title="Pindahkan"
-                                                    >
-                                                        <FolderInput size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleToggleVisibility(doc.id, 'archive', doc.visibility || 'public'); }}
-                                                        className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                                        title={doc.visibility === 'private' ? "Ubah ke Publik" : "Ubah ke Privat"}
-                                                    >
-                                                        {doc.visibility === 'private' ? <EyeOff size={14} /> : <Eye size={14} />}
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => requestDeleteArchive(e, doc.id, doc.judul)}
-                                                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
-                                                        title="Hapus"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Expandable Description */}
+                                        {isExpanded && doc.deskripsi && (
+                                            <div className="mt-1 pl-14 pr-4 py-3 bg-gray-50 dark:bg-zinc-950/50 rounded-lg border-l-2 border-amber-400 animate-in slide-in-from-top-2 duration-200">
+                                                <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed italic">
+                                                    "{doc.deskripsi}"
+                                                </p>
+                                                {doc.tags && doc.tags.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                                        {doc.tags.map((tag, i) => (
+                                                            <span key={i} className="px-1.5 py-0.5 bg-gray-200 dark:bg-zinc-800 text-gray-500 dark:text-zinc-500 rounded text-[10px] flex items-center">
+                                                                <Tag size={10} className="mr-1" /> {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : (
